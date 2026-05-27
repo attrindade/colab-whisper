@@ -1,4 +1,4 @@
-# Node
+# Standard Exclusions
 node_modules/
 .next/
 dist/
@@ -8,8 +8,6 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
-
-# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -17,7 +15,19 @@ __pycache__/
 .venv/
 venv/
 ENV/
-
-# Windows
 desktop.ini
 Thumbs.db
+
+# Heavy data & profiles
+chrome_profile/
+auth/
+debug_data/
+archive/
+PPAs/
+*.pdf
+*.zip
+*.db
+*.db-shm
+*.db-wal
+*.7z
+*.tar.gz
