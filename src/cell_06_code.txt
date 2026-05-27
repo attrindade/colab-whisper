@@ -1,0 +1,32 @@
+# Verifica se a função de verificação foi definida
+if 'etapas_concluidas' not in globals():
+    print("Erro: O passo 1 não foi executado. Este passo é crucial para a configuração inicial.")
+    print("Por favor, execute o passo 1 antes de prosseguir.")
+    raise Exception("Passo 1 não foi executado. Execute ele primeiro.")  # Interrompe a execução da célula
+
+verificar_etapas('2a')
+
+# @title **2.A - Fazer upload do arquivo**
+
+# @markdown Pode ser lento, dependendo do tamanho do arquivo e da velocidade da sua internet.
+
+# @markdown ### Aperte no *play* e siga as instruções.
+
+print('👉 Clique no botão "Escolher Arquivos", escolha seu arquivo e espero o upload terminar:\n')
+
+# Realiza o upload do arquivo
+uploaded = files.upload()
+output.clear()
+
+vocal_target_filename = list(uploaded.keys())[0]
+size_mb = len(uploaded[vocal_target_filename]) / (1024 * 1024)
+print('Aguarde 10s, finalizando.')
+print(f'Upload de "{vocal_target_filename}" com {size_mb:.2f} MB realizado com sucesso.')
+time.sleep(10)
+output.clear()
+
+vocal_target = move_para_pasta_input(vocal_target_filename)
+
+globals()['etapas_concluidas'].add('2a')
+
+display(Markdown(f'## ✅ Upload concluído com sucesso, continue ao passo 3. ({obter_timestamp_brasil()})'))

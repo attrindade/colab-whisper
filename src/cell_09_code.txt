@@ -1,0 +1,62 @@
+# # Verifica se a função de verificação foi definida
+# if 'etapas_concluidas' not in globals():
+#     print("Erro: O passo 1 não foi executado. Este passo é crucial para a configuração inicial.")
+#     print("Por favor, execute o passo 1 antes de prosseguir.")
+#     raise Exception("Passo 1 não foi executado. Execute ele primeiro.")  # Interrompe a execução da célula
+
+# import pytorch_lightning.utilities.migration.utils as migration_utils
+# migration_utils._upgrade_checkpoint = lambda *args, **kwargs: None  # monkey patch
+# import tensorflow
+
+import subprocess
+
+# verificar_etapas('3.1')
+
+
+# @title **3.1 - Transcrição do arquivo**
+# @markdown ## <font color="#6B8E23"><strong>Não é necessário fazer nada,  apenas clique em *play*.<font>
+
+##@markdown **Língua**: Selecione a que você deseja.
+language = "pt"
+device = "cuda"
+batch_size = 16 # reduce if low on GPU mem
+compute_type = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
+
+logger.info(f"language: {language}")
+
+print('\nEssa etapa demora um pouco. Em média:')
+print('\nPara 10 minutos de áudio/vídeo, essa etapa demora CERCA de 2min30s')
+print('\nPara 1 hora, CERCA de 8min')
+print('\nPara 1h30min, CERCA de 12min\n')
+
+#### 1. Transcribe with original whisper (batched)
+logger.info('[Passo 3.1] (1/4) Fazendo download de arquivos necessários para a transcrição...\n')
+model = whisperx.load_model("large-v2", device, compute_type=compute_type, vad_method="silero")
+audio = whisperx.load_audio(vocal_target)
+
+output.clear()
+logger.info('[Passo 3.1] (2/4) Realizando a transcrição...\n')
+result = model.transcribe(audio, batch_size=batch_size, print_progress=True, language=language)
+
+output.clear()
+#### 2. Align whisper output
+logger.info('[Passo 3.1] (3/4) Fazendo download de arquivos necessários para o alinhamento...\n')
+model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
+
+output.clear()
+logger.info('[Passo 3.1] (4/4) Alinhando a transcrição ao áudio original, determinando os momentos exatos de cada fala no áudio para tarefas de processamento de fala...\n')
+result = whisperx.align(result["segments"], model_a, metadata, audio, device, return_char_alignments=False)
+
+import gc
+gc.collect()
+torch.cuda.empty_cache()
+del model_a
+
+globals()['etapas_concluidas'].add('3.1')
+
+novo_processamento = True
+
+# output.clear()
+display(Markdown(f'## ✅ Tudo pronto. ({obter_timestamp_brasil()})'))
+display(Markdown('## Se você quiser a transcrição SEM a separação de locutores, pule para o passo 4.'))
+display(Markdown('## Se você quiser a transcrição COM a separação de locutores, continue ao passo 3.2.'))
