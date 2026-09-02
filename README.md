@@ -1,6 +1,6 @@
 # Transcrição por IA (WhisperX + Google Colab)
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/attrindade/colab-whisper/blob/main/Transcrição_por_IA_attrindade.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/attrindade/colab-whisper/blob/main/whisper_attrindade.ipynb)
 
 Ferramenta gratuita para transcrição e diarização (separação de locutores) de áudios e vídeos utilizando **WhisperX** (large-v3-turbo) e **pyannote.audio 3.1**, pronta para executar no **Google Colab** com aceleração por GPU (T4).
 
@@ -33,7 +33,7 @@ Assista ao vídeo demonstrativo dos resultados e do funcionamento no YouTube:
 
 ## 🛠️ Como Usar
 
-1. Clique no botão **[Open In Colab](https://colab.research.google.com/github/attrindade/colab-whisper/blob/main/Transcrição_por_IA_attrindade.ipynb)** acima.
+1. Clique no botão **[Open In Colab](https://colab.research.google.com/github/attrindade/colab-whisper/blob/main/whisper_attrindade.ipynb)** acima.
 2. Certifique-se de que o ambiente está com GPU ativa (**Ambiente de execução** → **Alterar tipo de ambiente** → **T4 GPU**).
 3. Execute as células em ordem:
    - **Passo 1:** Configurações e instalação das dependências.
@@ -60,12 +60,12 @@ O projeto é modularizado para facilitar a manutenção e versionamento:
 │   ├── 11_step4_export.py    # Passo 4: Geração dos links de download
 │   └── 12_suporte.py         # Download de logs de diagnóstico
 ├── build_notebook.py         # Compila os arquivos de src/ no .ipynb final
-├── Transcrição_por_IA_attrindade.ipynb # Notebook pronto para o Google Colab
+├── whisper_attrindade.ipynb # Notebook pronto para o Google Colab
 └── README.md
 `
 
 Para recompilar o notebook após qualquer alteração no código-fonte em src/:
-`ash
+` ash
 python build_notebook.py
 `
 

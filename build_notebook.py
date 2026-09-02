@@ -14,7 +14,7 @@ import string
 from pathlib import Path
 
 SRC = Path("src")
-OUTPUT = Path("Transcrição_por_IA_attrindade.ipynb")
+OUTPUT = Path("whisper_attrindade.ipynb")
 
 # ── Helpers de célula ────────────────────────────────────────────────────────
 
