@@ -74,12 +74,12 @@ def juntar(*filenames: str, titulo: str = "") -> str:
 MD_CABECALHO = """\
 ---
 
-# **Transcrição por IA - 11junho**
+# **Transcrição por IA**
 ### Google Colab por André Trevisol Trindade
 
 ---
 
-***Atualizado em 14/04/2026***
+***Atualizado em 02/09/2026***
 
 ***O que é o Google Colab?***
 
