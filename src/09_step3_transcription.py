@@ -22,6 +22,16 @@ _IDIOMA_MAP = {
 }
 language = _IDIOMA_MAP[idioma_padrao]
 
+import torchaudio
+if not hasattr(torchaudio, "get_audio_backend"):
+    torchaudio.get_audio_backend = lambda: "soundfile"
+if not hasattr(torchaudio, "set_audio_backend"):
+    torchaudio.set_audio_backend = lambda backend: None
+if not hasattr(torchaudio, "list_audio_backends"):
+    torchaudio.list_audio_backends = lambda: ["soundfile"]
+if not hasattr(torchaudio, "AudioMetaData"):
+    torchaudio.AudioMetaData = type("AudioMetaData", (), {})
+
 verificar_etapas("3.1")
 batch_jobs = globals().get("batch_jobs", [])
 if not batch_jobs:
@@ -311,18 +321,19 @@ for idx, job in enumerate(batch_jobs):
     # Alinhamento
     display(
         HTML(
-            f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:10px 0;background:#f0f9ff;border-left:4px solid #0284c7;border-radius:10px;padding:14px 18px">
-            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1e293b">⏳&nbsp; Alinhando timestamps ({idx+1}/{len(batch_jobs)})…</p>
-            <table style="border-collapse:collapse;font-size:13px;width:100%;margin-bottom:10px">
-            <tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600;white-space:nowrap">Arquivo</td><td style="color:#1e293b;font-weight:600">{target_filename}</td></tr>
-            <tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600">Estimativa</td><td style="color:#1e293b">~{_fmt_tempo(_est_align_s)}</td></tr>
-            </table>
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-top:2px">
-            <span id="wb-align-elapsed-{idx}">Decorrido: 0s</span>
-            <span>Processando...</span>
-            </div>
-            <script>{_js_timer_align}</script>
-            </div>"""
+            "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+            'margin:10px 0;background:#f0f9ff;border-left:4px solid #0284c7;border-radius:10px;padding:14px 18px">'
+            f'<p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1e293b">⏳&nbsp; Alinhando timestamps ({idx+1}/{len(batch_jobs)})…</p>'
+            '<table style="border-collapse:collapse;font-size:13px;width:100%;margin-bottom:10px">'
+            f'<tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600;white-space:nowrap">Arquivo</td><td style="color:#1e293b;font-weight:600">{target_filename}</td></tr>'
+            f'<tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600">Estimativa</td><td style="color:#1e293b">~{_fmt_tempo(_est_align_s)}</td></tr>'
+            "</table>"
+            '<div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-top:2px">'
+            f'<span id="wb-align-elapsed-{idx}">Decorrido: 0s</span>'
+            "<span>Processando...</span>"
+            "</div>"
+            f"<script>{_js_timer_align}</script>"
+            "</div>"
         )
     )
     display(HTML("<div></div>"), display_id=_align_bar_id)
@@ -444,20 +455,21 @@ if needs_diarization:
 
         display(
             HTML(
-                f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:10px 0;background:#fdf4ff;border-left:4px solid #a855f7;border-radius:10px;padding:14px 18px">
-                <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1e293b">🗣️&nbsp; Separando vozes ({idx+1}/{len(batch_jobs)})…</p>
-                <table style="border-collapse:collapse;font-size:13px;width:100%;margin-bottom:10px">
-                <tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600;white-space:nowrap">Arquivo</td><td style="color:#1e293b;font-weight:600">{target_filename}</td></tr>
-                <tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600">Duração</td><td style="color:#1e293b">{_job_dur_fmt}</td></tr>
-                <tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600">Estimativa</td><td style="color:#1e293b">~{_fmt_tempo(_est_diar_s)}</td></tr>
-                </table>
-                <p style="margin:5px 0 0;font-size:12px;color:#64748b">Por favor, não feche esta aba enquanto processa.</p>
-                <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-top:8px">
-                <span id="wb-diar-elapsed-{idx}">Decorrido: 0s</span>
-                <span>Processando...</span>
-                </div>
-                <script>{_js_timer_diar}</script>
-                </div>"""
+                '<div style=\'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;'
+                "margin:10px 0;background:#fdf4ff;border-left:4px solid #a855f7;border-radius:10px;padding:14px 18px'>"
+                f"<p style='margin:0 0 8px;font-size:16px;font-weight:700;color:#1e293b'>🗣️&nbsp; Separando vozes ({idx+1}/{len(batch_jobs)})…</p>"
+                "<table style='border-collapse:collapse;font-size:13px;width:100%;margin-bottom:10px'>"
+                f"<tr><td style='padding:3px 14px 3px 0;color:#94a3b8;font-weight:600;white-space:nowrap'>Arquivo</td><td style='color:#1e293b;font-weight:600'>{target_filename}</td></tr>"
+                f"<tr><td style='padding:3px 14px 3px 0;color:#94a3b8;font-weight:600'>Duração</td><td style='color:#1e293b'>{_job_dur_fmt}</td></tr>"
+                f"<tr><td style='padding:3px 14px 3px 0;color:#94a3b8;font-weight:600'>Estimativa</td><td style='color:#1e293b'>~{_fmt_tempo(_est_diar_s)}</td></tr>"
+                "</table>"
+                "<p style='margin:5px 0 0;font-size:12px;color:#64748b'>Por favor, não feche esta aba enquanto processa.</p>"
+                '<div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-top:8px">'
+                f'<span id="wb-diar-elapsed-{idx}">Decorrido: 0s</span>'
+                "<span>Processando...</span>"
+                "</div>"
+                f"<script>{_js_timer_diar}</script>"
+                "</div>"
             )
         )
         display(HTML("<div></div>"), display_id=_diar_bar_id)
@@ -519,12 +531,13 @@ globals()["etapas_concluidas"].add(
 if not needs_diarization:
     display(
         HTML(
-            f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:10px 0;background:#d1fae5;border-left:4px solid #059669;border-radius:10px;padding:16px 20px">
-            <p style="margin:0 0 6px;font-size:17px;font-weight:700;color:#1e293b">✅&nbsp; Processamento concluído ({len(batch_jobs)} arquivo(s))!</p>
-            <p style="margin:0 0 14px;font-size:14px;color:#475569">{obter_timestamp_brasil()}</p>
-            <div style="background:#fff;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px">
-            <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1e293b">Vá para o <strong>Passo 4</strong> para baixar os textos gerados.</p>
-            </div>
-            </div>"""
+            "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+            'margin:10px 0;background:#d1fae5;border-left:4px solid #059669;border-radius:10px;padding:16px 20px">'
+            f'<p style="margin:0 0 6px;font-size:17px;font-weight:700;color:#1e293b">✅&nbsp; Processamento concluído ({len(batch_jobs)} arquivo(s))!</p>'
+            f'<p style="margin:0 0 14px;font-size:14px;color:#475569">{obter_timestamp_brasil()}</p>'
+            '<div style="background:#fff;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px">'
+            '<p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#1e293b">Vá para o <strong>Passo 4</strong> para baixar os textos gerados.</p>'
+            "</div>"
+            "</div>"
         )
     )

@@ -49,6 +49,8 @@ if not hasattr(torchaudio, "list_audio_backends"):
     torchaudio.list_audio_backends = lambda: ["soundfile"]
 if not hasattr(torchaudio, "set_audio_backend"):
     torchaudio.set_audio_backend = lambda backend: None
+if not hasattr(torchaudio, "get_audio_backend"):
+    torchaudio.get_audio_backend = lambda: "soundfile"
 
 # Fix huggingface_hub crashing when pyannote.audio passes 'use_auth_token'
 import huggingface_hub

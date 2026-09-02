@@ -17,12 +17,15 @@ def _barra(passo, total, descricao):
     nota = '<p style="margin:0 0 10px;font-size:12px;color:#d97706;font-style:italic">⚠️ Dica: Essa etapa deve levar cerca de 1 minuto. Não recarregue a página!</p>'
     display(
         HTML(
-            f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">
-            <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e293b">⏳ Preparando e Instalando… ({passo}/{total})</p>
-            <p style="margin:0 0 8px;font-size:13px;color:#475569">{descricao}</p>
-            {nota}
-            <div style="background:#e2e8f0;border-radius:99px;height:6px">
-            <div style="background:#4f46e5;width:{int(passo/total*100)}%;height:6px;border-radius:99px"></div></div></div>"""
+            "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+            'margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">'
+            '<p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e293b">⏳ Preparando e Instalando… '
+            f"({passo}/{total})</p>"
+            f'<p style="margin:0 0 8px;font-size:13px;color:#475569">{descricao}</p>'
+            f"{nota}"
+            '<div style="background:#e2e8f0;border-radius:99px;height:6px">'
+            f'<div style="background:#4f46e5;width:{int(passo/total*100)}%;height:6px;'
+            'border-radius:99px"></div></div></div>'
         )
     )
 
