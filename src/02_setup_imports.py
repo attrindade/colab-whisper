@@ -10,12 +10,13 @@ from google.colab import output, files
 
 display(
     HTML(
-        """<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">
-        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e293b">⏳ Preparando e Instalando… (4/4)</p>
-        <p style="margin:0 0 8px;font-size:13px;color:#475569">Carregando funções internas…</p>
-        <p style="margin:0 0 10px;font-size:12px;color:#d97706;font-style:italic">⚠️ Dica: Essa etapa deve levar cerca de 1 minuto. Não recarregue a página!</p>
-        <div style="background:#e2e8f0;border-radius:99px;height:6px">
-        <div style="background:#4f46e5;width:80%;height:6px;border-radius:99px"></div></div></div>"""
+        "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
+        'margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">'
+        '<p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e293b">⏳ Preparando e Instalando… (4/4)</p>'
+        '<p style="margin:0 0 8px;font-size:13px;color:#475569">Carregando funções internas…</p>'
+        '<p style="margin:0 0 10px;font-size:12px;color:#d97706;font-style:italic">⚠️ Dica: Essa etapa deve levar cerca de 1 minuto. Não recarregue a página!</p>'
+        '<div style="background:#e2e8f0;border-radius:99px;height:6px">'
+        '<div style="background:#4f46e5;width:80%;height:6px;border-radius:99px"></div></div></div>'
     )
 )
 
@@ -75,7 +76,49 @@ def _patched_ModelCard_load(cls, *args, **kwargs):
 
 huggingface_hub.ModelCard.load = _patched_ModelCard_load
 
-# Fix numpy internal C-extension symbols when pre-loaded in colab memory
+# Fix numpy internal C-extension symbols and NumPy 2.0 expired attributes
+try:
+    import numpy as _np
+    _compat_map = {
+        "NaN": _np.nan,
+        "NAN": _np.nan,
+        "Inf": _np.inf,
+        "Infinity": _np.inf,
+        "infty": _np.inf,
+        "PINF": _np.inf,
+        "NINF": -_np.inf,
+        "float_": _np.float64,
+        "complex_": _np.complex128,
+        "string_": _np.bytes_,
+        "unicode_": _np.str_,
+        "asfarray": _np.asarray,
+        "alltrue": _np.all,
+        "sometrue": _np.any,
+        "round_": _np.round,
+    }
+    for _k, _v in _compat_map.items():
+        setattr(_np, _k, _v)
+
+    _orig_np_getattr = getattr(_np, "__getattr__", None)
+    if _orig_np_getattr is not None:
+        def _safe_np_getattr(attr):
+            if attr in _compat_map:
+                return _compat_map[attr]
+            try:
+                return _orig_np_getattr(attr)
+            except AttributeError:
+                if hasattr(_np, "__expired_attributes__") and attr in _np.__expired_attributes__:
+                    _target = _np.__expired_attributes__[attr]
+                    _m = re.search(r"Use `np\.([^`]+)`", _target)
+                    if _m and hasattr(_np, _m.group(1)):
+                        _val = getattr(_np, _m.group(1))
+                        setattr(_np, attr, _val)
+                        return _val
+                raise
+        _np.__getattr__ = _safe_np_getattr
+except Exception:
+    pass
+
 try:
     import numpy._core.umath as _numath
     for _attr in ("_slice", "_center", "_expandtabs"):
