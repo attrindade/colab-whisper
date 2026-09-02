@@ -59,6 +59,10 @@ if "passo1_concluido" not in globals():
         "ctranslate2",
         "transformers",
         "pyannote.audio==3.1.1",
+        "pyannote.core<6.0",
+        "pyannote.database<6.0",
+        "pyannote.metrics<4.0",
+        "pyannote.pipeline<4.0",
     )
 
     clear_output(wait=True)

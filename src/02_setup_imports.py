@@ -76,6 +76,22 @@ def _patched_ModelCard_load(cls, *args, **kwargs):
 
 huggingface_hub.ModelCard.load = _patched_ModelCard_load
 
+# Fix numpy internal C-extension symbols when pre-loaded in colab memory
+try:
+    import numpy._core.umath as _numath
+    for _attr in ("_slice", "_center", "_expandtabs"):
+        if not hasattr(_numath, _attr):
+            setattr(_numath, _attr, lambda *args, **kwargs: None)
+except Exception:
+    pass
+
+try:
+    import numpy._core._multiarray_umath as _nmumath
+    if not hasattr(_nmumath, "_blas_supports_fpe"):
+        _nmumath._blas_supports_fpe = lambda *args, **kwargs: True
+except Exception:
+    pass
+
 # Fix pyannote.audio expecting 'use_auth_token' while WhisperX passes 'token'
 import pyannote.audio
 
