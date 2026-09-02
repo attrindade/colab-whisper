@@ -33,7 +33,7 @@ def celula_codigo(fonte: str) -> dict:
         "cell_type": "code",
         "execution_count": None,
         "id": _id(),
-        "metadata": {},
+        "metadata": {"cellView": "form"},
         "outputs": [],
         "source": _linhas(fonte),
     }
