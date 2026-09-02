@@ -3,8 +3,7 @@ PASSO 3.1 - Transcrição com WhisperX
 Carrega o modelo, transcreve e alinha os timestamps ao áudio original (Em lote).
 """
 
-# @markdown ### Clique em ▶ **play** para configurar os idiomas e separação de locutores
-# @markdown *(Um menu surgirá abaixo com as opções para cada arquivo do lote)*
+# @markdown Clique em ▶ **play**
 
 idioma_padrao = "Português 🇧🇷"
 

@@ -4,7 +4,7 @@ Instala os pacotes que faltam no Colab SEM mexer no PyTorch já instalado.
 Isso evita a necessidade de reiniciar a sessão.
 """
 
-# @markdown ## Clique em ▶ **play**.
+# @markdown Clique em ▶ **play**.
 
 import subprocess
 import sys
@@ -33,7 +33,7 @@ def _barra(passo, total, descricao):
 def _pip(descricao, *pacotes):
     """Instala pacotes sem mostrar saída no terminal; grava tudo no log."""
     result = subprocess.run(
-        [sys.executable, "-m", "pip", "install", *pacotes],
+        [sys.executable, "-m", "pip", "install", "--prefer-binary", *pacotes],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -55,11 +55,10 @@ if "passo1_concluido" not in globals():
     _barra(1, 4, "Dependências do WhisperX (faster-whisper, transformers, pyannote…)")
     _pip(
         "(1/3) Dependências do WhisperX",
-        "numpy==2.0.2",
         "faster-whisper",
         "ctranslate2",
         "transformers",
-        "pyannote.audio",
+        "pyannote.audio==3.1.1",
     )
 
     clear_output(wait=True)

@@ -18,7 +18,7 @@ files.download(f"/content/{LOG_FILE}")
 display(
     HTML(
         "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
-        'margin:10px 0;background:#fef0e2;border-left:4px solid #dc2626;border-radius:10px;padding:16px 20px">'
+        'margin:10px 0;background:#fee2e2;border-left:4px solid #dc2626;border-radius:10px;padding:16px 20px">'
         '<p style="margin:0 0 4px;font-size:17px;font-weight:700;color:#1e293b">📋&nbsp; Arquivo de diagnóstico baixado</p>'
         f'<p style="margin:0 0 12px;font-size:14px;color:#475569">Arquivo: <code style="background:#fecaca;'
         f'padding:2px 6px;border-radius:4px;font-size:13px">{LOG_FILE}</code></p>'

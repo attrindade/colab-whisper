@@ -2,7 +2,7 @@
 PASSO 2 - Envio de arquivo em lote (Local e Nuvem)
 """
 
-# @markdown ### Clique em ▶ **play** para escolher como deseja enviar seus arquivos (Até 3 de uma vez).
+# @markdown Clique em ▶ **play** para escolher como deseja enviar seus arquivos (até 3 de uma vez).
 
 verificar_etapas("2a")  # Mantivemos a dependência do passo 1 que antes se chamava 2a/2b
 

@@ -3,7 +3,7 @@ PASSO 4 - Exportação e download dos resultados
 Gera os arquivos de saída e inicia o download automático (Suporta lote).
 """
 
-# @markdown Clique em ▶ **play** para gerar todos os formatos e mostrar botões para baixar.
+# @markdown Clique em ▶ play para habilitar as opções de download.
 
 import base64
 import os

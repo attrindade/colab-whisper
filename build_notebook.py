@@ -71,15 +71,14 @@ def juntar(*filenames: str, titulo: str = "") -> str:
 
 # ── Conteúdo das células markdown ────────────────────────────────────────────
 
-MD_TITULO = """\
+MD_CABECALHO = """\
 ---
 
-# **Transcrição por IA** 🎙️
+# **Transcrição por IA - 11junho**
 ### Google Colab por André Trevisol Trindade
 
----"""
+---
 
-MD_INTRO = """\
 ***Atualizado em 14/04/2026***
 
 ***O que é o Google Colab?***
@@ -99,60 +98,37 @@ O Whisper é uma ferramenta de inteligência artificial desenvolvida para transc
 ---
 <sub>Desenvolvido por [**André Trevisol Trindade**](https://www.attrindade.com) · Cientista de Dados com foco em pesquisa</sub>
 
-<sub>Tecnologia: [WhisperX](https://github.com/m-bain/whisperX) · [faster-whisper](https://github.com/SYSTRAN/faster-whisper) · [pyannote.audio](https://github.com/pyannote/pyannote-audio) · [yt-dlp](https://github.com/yt-dlp/yt-dlp)</sub>"""
+<sub>Tecnologia: [WhisperX](https://github.com/m-bain/whisperX) · [faster-whisper](https://github.com/SYSTRAN/faster-whisper) · [pyannote.audio](https://github.com/pyannote/pyannote-audio) · [yt-dlp](https://github.com/yt-dlp/yt-dlp)</sub>
 
-MD_PASSO1 = """\
 ---
 
-## PASSO 1 - Configurações
-"""
+# PASSO 1 - Configurações"""
 
 MD_PASSO2 = """\
 ---
 
-## PASSO 2 - Enviar arquivo
-"""
+# PASSO 2 - Enviar arquivo"""
 
 MD_PASSO3 = """\
 ---
 
-## PASSO 3 - Transcrição
-"""
+# PASSO 3 - Transcrição"""
 
-MD_PASSO3_2 = """\
+MD_PASSO4 = """\
 ---
 
-## Identificar quem fala *(opcional)*
-
-> Pule esta etapa se quiser apenas o texto sem identificar os locutores."""
-
-MD_PASSO4 = """---\
-
-## PASSO 4 - Download
-"""
-
-MD_PASSO1_1 = """\
----
-
-## Passo 1.1 - Carregar funções internas
-
-Esta célula carrega todas as funções usadas pelo notebook.
-**Execute uma vez por sessão** — não é necessário modificar nada."""
+# PASSO 4 - Download"""
 
 MD_SUPORTE = """\
 ---
 
-## Solução de Problemas
-"""
+# Solução de Problemas"""
 
 # ── Montagem das células ──────────────────────────────────────────────────────
 
 celulas = [
-    # Cabeçalho
-    celula_markdown(MD_TITULO),
-    celula_markdown(MD_INTRO),
-    # Passo 1: instalação e carregamento de funções internas
-    celula_markdown(MD_PASSO1),
+    # Cabeçalho e Passo 1
+    celula_markdown(MD_CABECALHO),
     celula_codigo(
         juntar(
             "01_setup_install.py",
