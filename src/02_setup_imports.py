@@ -41,6 +41,8 @@ import torch
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
 # Fix pyannote.audio 3.1.1 compatibility with colab's newer torchaudio
+import sys
+import types
 import torchaudio
 
 if not hasattr(torchaudio, "AudioMetaData"):
@@ -51,6 +53,15 @@ if not hasattr(torchaudio, "set_audio_backend"):
     torchaudio.set_audio_backend = lambda backend: None
 if not hasattr(torchaudio, "get_audio_backend"):
     torchaudio.get_audio_backend = lambda: "soundfile"
+
+if "torchaudio.backend" not in sys.modules:
+    _backend_mod = types.ModuleType("torchaudio.backend")
+    _common_mod = types.ModuleType("torchaudio.backend.common")
+    _common_mod.AudioMetaData = torchaudio.AudioMetaData
+    _backend_mod.common = _common_mod
+    sys.modules["torchaudio.backend"] = _backend_mod
+    sys.modules["torchaudio.backend.common"] = _common_mod
+    torchaudio.backend = _backend_mod
 
 # Fix huggingface_hub crashing when pyannote.audio passes 'use_auth_token'
 import huggingface_hub

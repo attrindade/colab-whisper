@@ -22,15 +22,27 @@ _IDIOMA_MAP = {
 }
 language = _IDIOMA_MAP[idioma_padrao]
 
+import sys
+import types
 import torchaudio
-if not hasattr(torchaudio, "get_audio_backend"):
-    torchaudio.get_audio_backend = lambda: "soundfile"
-if not hasattr(torchaudio, "set_audio_backend"):
-    torchaudio.set_audio_backend = lambda backend: None
-if not hasattr(torchaudio, "list_audio_backends"):
-    torchaudio.list_audio_backends = lambda: ["soundfile"]
+
 if not hasattr(torchaudio, "AudioMetaData"):
     torchaudio.AudioMetaData = type("AudioMetaData", (), {})
+if not hasattr(torchaudio, "list_audio_backends"):
+    torchaudio.list_audio_backends = lambda: ["soundfile"]
+if not hasattr(torchaudio, "set_audio_backend"):
+    torchaudio.set_audio_backend = lambda backend: None
+if not hasattr(torchaudio, "get_audio_backend"):
+    torchaudio.get_audio_backend = lambda: "soundfile"
+
+if "torchaudio.backend" not in sys.modules:
+    _backend_mod = types.ModuleType("torchaudio.backend")
+    _common_mod = types.ModuleType("torchaudio.backend.common")
+    _common_mod.AudioMetaData = torchaudio.AudioMetaData
+    _backend_mod.common = _common_mod
+    sys.modules["torchaudio.backend"] = _backend_mod
+    sys.modules["torchaudio.backend.common"] = _common_mod
+    torchaudio.backend = _backend_mod
 
 verificar_etapas("3.1")
 batch_jobs = globals().get("batch_jobs", [])
