@@ -41,28 +41,6 @@ Assista ao vídeo demonstrativo dos resultados e do funcionamento no YouTube:
    - **Passo 3:** Transcrição e identificação de locutores.
    - **Passo 4:** Download dos arquivos gerados.
 
----
-
-## 🏗️ Estrutura do Repositório
-
-O projeto é modularizado para facilitar a manutenção e versionamento:
-
-`	ext
-├── src/                      # Código modularizado
-│   ├── 01_setup_install.py   # Passo 1: Instalação otimizada das bibliotecas
-│   ├── 02_setup_imports.py   # Passo 1.1: Imports, patches e logger
-│   ├── 03_helpers.py         # Design system (cards visuais) e silenciador
-│   ├── 04_audio_input.py     # Download de arquivos (Drive, YouTube, etc.)
-│   ├── 05_diarization_helpers.py # Interface interativa de locutores
-│   ├── 06_output_writers.py  # Geradores de TXT, SRT e NVivo
-│   ├── 07_step2_upload.py    # Passo 2: Menu de seleção em lote
-│   ├── 09_step3_transcription.py # Passo 3: Transcrição e diarização
-│   ├── 11_step4_export.py    # Passo 4: Geração dos links de download
-│   └── 12_suporte.py         # Download de logs de diagnóstico
-├── build_notebook.py         # Compila os arquivos de src/ no .ipynb final
-├── whisper_attrindade.ipynb # Notebook pronto para o Google Colab
-└── README.md
-`
 
 Para recompilar o notebook após qualquer alteração no código-fonte em src/:
 ` ash
@@ -78,4 +56,4 @@ Desenvolvido por [**André Trevisol Trindade**](https://www.attrindade.com) · C
 Qualquer dúvida ou sugestão, entre em contato em: [**attrindade.dados@gmail.com**](mailto:attrindade.dados@gmail.com)
 
 Se a ferramenta te ajudou, considere fazer uma doação via Pix para ajudar a mantê-la atualizada:  
-**Chave Pix:** ttrindade.dados@gmail.com
+**Chave Pix:** attrindade.dados@gmail.com
