@@ -10,13 +10,12 @@ from google.colab import output, files
 
 display(
     HTML(
-        "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
-        'margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">'
-        '<p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e293b">⏳ Preparando e Instalando… (4/4)</p>'
-        '<p style="margin:0 0 8px;font-size:13px;color:#475569">Carregando funções internas…</p>'
-        '<p style="margin:0 0 10px;font-size:12px;color:#d97706;font-style:italic">⚠️ Dica: Essa etapa deve levar cerca de 1 minuto. Não recarregue a página!</p>'
-        '<div style="background:#e2e8f0;border-radius:99px;height:6px">'
-        '<div style="background:#4f46e5;width:80%;height:6px;border-radius:99px"></div></div></div>'
+        """<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">
+        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e293b">⏳ Preparando e Instalando… (4/4)</p>
+        <p style="margin:0 0 8px;font-size:13px;color:#475569">Carregando funções internas…</p>
+        <p style="margin:0 0 10px;font-size:12px;color:#d97706;font-style:italic">⚠️ Dica: Essa etapa deve levar cerca de 1 minuto. Não recarregue a página!</p>
+        <div style="background:#e2e8f0;border-radius:99px;height:6px">
+        <div style="background:#4f46e5;width:80%;height:6px;border-radius:99px"></div></div></div>"""
     )
 )
 

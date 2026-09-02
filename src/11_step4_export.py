@@ -117,18 +117,17 @@ globals()["etapas_concluidas"].add(4)
 
 display(
     HTML(
-        "<div style=\"font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
-        'margin:10px 0;background:#f0fdfa;border-left:4px solid #14b8a6;border-radius:10px;padding:16px 20px">'
-        '<p style="margin:0 0 16px;font-size:17px;font-weight:700;color:#1e293b">✅&nbsp; Arquivos Prontos para Download!</p>'
-        f"{todos_botoes}"
-        '<div style="margin-top:18px;padding:14px 16px;background:#fdfce8;border:1px solid #fde047;border-radius:8px;display:flex;align-items:flex-start;gap:12px">'
-        '<span style="font-size:22px;line-height:1">☕</span>'
-        "<div>"
-        '<p style="margin:0 0 3px;font-size:13px;font-weight:700;color:#713f12">Gostou da ferramenta? Considere apoiar o projeto!</p>'
-        '<p style="margin:0;font-size:12px;color:#92400e;line-height:1.5">Uma contribuição via Pix ajuda a manter essa iniciativa gratuita e em constante melhoria.<br>'
-        '<strong>Chave Pix:</strong> <code style="background:#fef9c3;padding:1px 5px;border-radius:4px;font-size:12px">attrindade.dados@gmail.com</code></p>'
-        "</div>"
-        "</div>"
-        "</div>"
+        f"""<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:10px 0;background:#f0fdfa;border-left:4px solid #14b8a6;border-radius:10px;padding:16px 20px">
+        <p style="margin:0 0 16px;font-size:17px;font-weight:700;color:#1e293b">✅&nbsp; Arquivos Prontos para Download!</p>
+        {todos_botoes}
+        <div style="margin-top:18px;padding:14px 16px;background:#fdfce8;border:1px solid #fde047;border-radius:8px;display:flex;align-items:flex-start;gap:12px">
+        <span style="font-size:22px;line-height:1">☕</span>
+        <div>
+        <p style="margin:0 0 3px;font-size:13px;font-weight:700;color:#713f12">Gostou da ferramenta? Considere apoiar o projeto!</p>
+        <p style="margin:0;font-size:12px;color:#92400e;line-height:1.5">Uma contribuição via Pix ajuda a manter essa iniciativa gratuita e em constante melhoria.<br>
+        <strong>Chave Pix:</strong> <code style="background:#fef9c3;padding:1px 5px;border-radius:4px;font-size:12px">attrindade.dados@gmail.com</code></p>
+        </div>
+        </div>
+        </div>"""
     )
 )
