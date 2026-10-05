@@ -63,6 +63,9 @@ if "passo1_concluido" not in globals():
         "pyannote.database<6.0",
         "pyannote.metrics<4.0",
         "pyannote.pipeline<4.0",
+        # O Colab passou para CUDA 13 (torch +cu130), mas o ctranslate2 4.x
+        # ainda carrega libcublas.so.12 no primeiro cálculo na GPU (~600 MB).
+        "nvidia-cublas-cu12>=12.4,<13",
     )
 
     clear_output(wait=True)
@@ -91,3 +94,43 @@ if "passo1_concluido" not in globals():
     import importlib
 
     importlib.reload(site)
+
+
+def _precarregar_cublas12():
+    """Deixa o libcublas.so.12 visível para o ctranslate2 neste processo.
+
+    Carrega pelo caminho absoluto da roda nvidia-cublas-cu12. Com RTLD_LOCAL,
+    o dlopen("libcublas.so.12") do ctranslate2 reaproveita esta cópia pelo
+    nome, e o cuBLAS 13 do torch continua intocado.
+    """
+    import ctypes
+    import os
+    import site
+
+    try:
+        ctypes.CDLL("libcublas.so.12")
+        return "já disponível"
+    except OSError:
+        pass
+
+    bases = [*sys.path, *site.getsitepackages(), site.getusersitepackages()]
+    for base in dict.fromkeys(b for b in bases if b):
+        pasta = os.path.join(base, "nvidia", "cublas", "lib")
+        alvo = os.path.join(pasta, "libcublas.so.12")
+        if os.path.exists(alvo):
+            for nome in ("libcublasLt.so.12", "libcublas.so.12"):
+                _CUBLAS_HANDLES.append(
+                    ctypes.CDLL(os.path.join(pasta, nome), mode=os.RTLD_LOCAL)
+                )
+            return alvo
+    raise OSError("nvidia-cublas-cu12 não encontrado em " + ", ".join(bases))
+
+
+_CUBLAS_HANDLES = globals().get("_CUBLAS_HANDLES", [])
+try:
+    _origem_cublas = _precarregar_cublas12()
+    with open(_INSTALL_LOG, "a", encoding="utf-8") as f:
+        f.write(f"\n[cuBLAS 12] {_origem_cublas}\n")
+except Exception as e:
+    with open(_INSTALL_LOG, "a", encoding="utf-8") as f:
+        f.write(f"\n[cuBLAS 12] falhou: {e!r}\n")
