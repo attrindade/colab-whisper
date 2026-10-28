@@ -118,7 +118,7 @@ O Whisper é uma ferramenta de inteligência artificial desenvolvida para transc
 
 📖 [Demonstração dos resultados](https://youtu.be/n-VhSvGEpTk)
 
-> Qualquer dúvida, sugestão ou elogio me envie por e-mail em [**attrindade.dados@gmail.com**](mailto:attrindade.dados@gmail.com)
+> Qualquer dúvida ou sugestão me envie por e-mail em [**attrindade.dados@gmail.com**](mailto:attrindade.dados@gmail.com)
 
 __APOIO_CABECALHO__
 
