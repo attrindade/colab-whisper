@@ -156,21 +156,37 @@ def verificar_etapas(passo_atual):
     if passo_atual not in prerequisitos:
         raise ValueError(f"Passo '{passo_atual}' não reconhecido.")
 
-    # Novo áudio: reseta estado se já havia uma transcrição em andamento
-    if passo_atual in PASSOS_2 and concluidas & (PASSOS_2 | {'3.1', '3.2', 4}):
-        card_aviso(
-            'Nova transcrição detectada',
-            'O estado anterior foi resetado. Prossiga normalmente.',
+    # Novo áudio: só zera a fila se o Passo 3 já rodou com ela. Rodar o Passo 2 de
+    # novo antes disso mantém os arquivos já escolhidos (para acrescentar mais).
+    # Devolve True quando zerou: o Passo 2 mostra o aviso acima do menu.
+    reiniciou = False
+    if passo_atual in PASSOS_2:
+        ja_transcreveu = bool(concluidas & {'3.1', '3.2', 4}) or any(
+            isinstance(j, dict) and j.get('status') for j in (globals().get('batch_jobs') or [])
         )
-        _reset_para_nova_transcricao()
-        concluidas = globals()['etapas_concluidas']
+        if ja_transcreveu:
+            _reset_para_nova_transcricao()
+            concluidas = globals()['etapas_concluidas']
+            reiniciou = True
 
     for req in prerequisitos[passo_atual]:
         if req == '2':
             if not concluidas & PASSOS_2:
-                raise RuntimeError("Execute um dos Passos 2 (upload ou link) antes de prosseguir.")
+                raise ErroAmigavel(
+                    "Nenhum arquivo foi escolhido ainda",
+                    "Este passo precisa dos arquivos escolhidos no Passo 2.",
+                    "Suba até o <strong>Passo 2</strong>, clique em ▶ e adicione pelo menos um arquivo.",
+                    tipo="warn",
+                )
         elif req not in concluidas:
-            raise RuntimeError(f"Execute o Passo {req} antes de prosseguir.")
+            nome = str(req).split('.')[0]
+            raise ErroAmigavel(
+                f"Falta rodar o Passo {nome}",
+                f"Este passo depende do resultado do Passo {nome}, que ainda não foi concluído nesta sessão.",
+                f"Suba até o <strong>Passo {nome}</strong> e clique em ▶. Depois volte aqui.",
+                tipo="warn",
+            )
+    return reiniciou
 
 
 def _reset_para_nova_transcricao():

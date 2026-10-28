@@ -38,14 +38,14 @@ Assista ao vídeo demonstrativo dos resultados e do funcionamento no YouTube:
 3. Execute as células em ordem:
    - **Passo 1:** Configurações e instalação das dependências.
    - **Passo 2:** Escolha dos arquivos (Upload, YouTube ou Drive).
-   - **Passo 3:** Transcrição e identificação de locutores.
-   - **Passo 4:** Download dos arquivos gerados.
+   - **Passo 3:** Transcrição, identificação de locutores (ouvindo trechos de cada pessoa) e download dos arquivos gerados.
 
+Se algo der errado, a própria ferramenta explica o que aconteceu e o que fazer. A seção **Solução de Problemas** no fim do caderno mostra os downloads de novo e gera o arquivo de diagnóstico para o suporte.
 
-Para recompilar o notebook após qualquer alteração no código-fonte em src/:
-` ash
+Para recompilar o notebook após qualquer alteração no código-fonte em src/ (o `.ipynb` é gerado; edições feitas direto no Colab se perdem na próxima recompilação):
+```bash
 python build_notebook.py
-`
+```
 
 ---
 

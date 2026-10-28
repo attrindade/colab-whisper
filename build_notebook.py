@@ -59,14 +59,41 @@ def ler(filename: str) -> str:
     return texto.strip()
 
 
+def _separar_form(texto: str) -> tuple[list[str], str]:
+    """Separa as linhas de formulário do Colab (# @title / # @markdown) do início do texto."""
+    linhas = texto.splitlines()
+    form = []
+    while linhas and (linhas[0].startswith("# @") or (form and not linhas[0].strip())):
+        linha = linhas.pop(0)
+        if linha.strip():
+            form.append(linha)
+    return form, "\n".join(linhas).strip()
+
+
+def _montar(form: list[str], partes: list[str]) -> str:
+    corpo = "\n\n\n".join(p for p in partes if p)
+    return ("\n".join(form) + "\n\n" + corpo) if form else corpo
+
+
 def juntar(*filenames: str, titulo: str = "") -> str:
-    """Une múltiplos .py num único bloco, com @title opcional."""
-    partes = [f"# @title {titulo}"] if titulo else []
+    """Une múltiplos .py num único bloco, com @title opcional.
+
+    As linhas de formulário (# @markdown) sobem para o topo da célula, para o
+    Colab mostrar o texto do formulário mesmo quando o primeiro arquivo não as tem.
+    """
+    form = [f"# @title {titulo}"] if titulo else []
+    partes = []
     for fn in filenames:
-        conteudo = ler(fn)
-        if conteudo:
-            partes.append(conteudo)
-    return "\n\n\n".join(partes)
+        linhas_form, conteudo = _separar_form(ler(fn))
+        form.extend(linhas_form)
+        partes.append(conteudo)
+    return _montar(form, partes)
+
+
+def com_guarda(filename: str) -> str:
+    """Lê o .py de um passo e insere a guarda do Passo 1 logo depois do formulário."""
+    form, corpo = _separar_form(ler(filename))
+    return _montar(form, [ler("_guarda_passo1.py"), corpo])
 
 
 # ── Conteúdo das células markdown ────────────────────────────────────────────
@@ -79,7 +106,7 @@ MD_CABECALHO = """\
 
 ---
 
-***Atualizado em 02/09/2026***
+***Atualizado em 28/10/2026***
 
 ***O que é o Google Colab?***
 
@@ -92,8 +119,8 @@ O Whisper é uma ferramenta de inteligência artificial desenvolvida para transc
 📖 [Demonstração dos resultados](https://youtu.be/n-VhSvGEpTk)
 
 > Qualquer dúvida, sugestão ou elogio me envie por e-mail em [**attrindade.dados@gmail.com**](mailto:attrindade.dados@gmail.com)
->
->**Considere fazer uma doação e ajudar a manter essa iniciativa, a chave Pix é o mesmo e-mail!**
+
+__APOIO_CABECALHO__
 
 ---
 <sub>Desenvolvido por [**André Trevisol Trindade**](https://www.attrindade.com) · Cientista de Dados com foco em pesquisa</sub>
@@ -104,6 +131,50 @@ O Whisper é uma ferramenta de inteligência artificial desenvolvida para transc
 
 # PASSO 1 - Configurações"""
 
+def _apoio_cabecalho() -> str:
+    """Acordeão fechado no cabeçalho: uma linha discreta; aberto, um QR por valor sugerido.
+
+    Célula de texto do Colab não roda JavaScript, então em vez de botões que trocam
+    o QR, os QR ficam lado a lado (R$ 5, R$ 10 sugerido, R$ 25, outro valor).
+    Usa os códigos gerados por tools/gerar_pix.py (src/05c_apoio_pix.py).
+    """
+    import base64
+
+    dados: dict = {}
+    exec((SRC / "05c_apoio_pix.py").read_text(encoding="utf-8"), dados)
+
+    # Célula de texto do Colab descarta <style> e style="", então os "botões" de valor são
+    # <details> lado a lado numa tabela: clicar no valor abre o QR dele (R$ 10 já vem aberto).
+    celulas = ""
+    for valor, _, svg in dados["PIX_OPCOES"]:
+        qr = "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
+        # "&#36;" em vez de "$": no Markdown do Colab, "$...$" vira fórmula e some
+        rotulo = f"<b>R&#36; {valor}</b>" if valor else "<b>Outro valor</b>"
+        if valor == 10:
+            rotulo += " ⭐ sugestão"
+        alt = f"QR Code do Pix de R&#36; {valor}" if valor else "QR Code do Pix com valor livre"
+        dica = "<br><sub>você digita o valor no app</sub>" if not valor else ""
+        celulas += (
+            f'<td align="center" valign="top"><details{" open" if valor == 10 else ""}>'
+            f"<summary>{rotulo}</summary><br>"
+            f'<img src="{qr}" width="200" height="200" alt="{alt}">{dica}'
+            "</details></td>"
+        )
+    return (
+        "<details>"
+        "<summary>☕ Gostou? Apoie com um Pix (opcional)</summary><br>"
+        "Este caderno é gratuito e vai continuar sendo. Eu o mantenho sozinho e, quando o Google "
+        "muda o Colab, sou eu que conserto. Se ele te poupou tempo, qualquer valor ajuda.<br><br>"
+        "Escolha o valor e aponte a câmera do app do banco para o QR Code:"
+        f"<table><tr>{celulas}</tr></table>"
+        f"Ou use a chave Pix <code>{dados['PIX_CHAVE']}</code>.<br>"
+        "<sub>Não doar também está tudo bem. Obrigado por usar! 💛</sub>"
+        "</details>"
+    )
+
+
+MD_CABECALHO = MD_CABECALHO.replace("__APOIO_CABECALHO__", _apoio_cabecalho())
+
 MD_PASSO2 = """\
 ---
 
@@ -112,12 +183,7 @@ MD_PASSO2 = """\
 MD_PASSO3 = """\
 ---
 
-# PASSO 3 - Transcrição"""
-
-MD_PASSO4 = """\
----
-
-# PASSO 4 - Download"""
+# PASSO 3 - Transcrição e download"""
 
 MD_SUPORTE = """\
 ---
@@ -131,25 +197,27 @@ celulas = [
     celula_markdown(MD_CABECALHO),
     celula_codigo(
         juntar(
+            "00_bootstrap.py",
             "01_setup_install.py",
             "02_setup_imports.py",
             "03_helpers.py",
             "04_audio_input.py",
             "05_diarization_helpers.py",
+            "05b_export_helpers.py",
+            "05c_apoio_pix.py",
+            "05d_apoio.py",
             "06_output_writers.py",
         )
     ),
     # Passo 2
     celula_markdown(MD_PASSO2),
-    celula_codigo(ler("07_step2_upload.py")),
-    # Passo 3
+    celula_codigo(com_guarda("07_step2_upload.py")),
+    # Passo 3 (termina mostrando os downloads)
     celula_markdown(MD_PASSO3),
-    celula_codigo(ler("09_step3_transcription.py")),
-    # Passo 4
-    celula_markdown(MD_PASSO4),
-    celula_codigo(ler("11_step4_export.py")),
-    # Suporte
+    celula_codigo(com_guarda("09_step3_transcription.py")),
+    # Suporte: mostrar downloads de novo + diagnóstico
     celula_markdown(MD_SUPORTE),
+    celula_codigo(com_guarda("11_step4_export.py")),
     celula_codigo(ler("12_suporte.py")),
 ]
 

@@ -14,7 +14,7 @@ display(
         'margin:8px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px">'
         '<p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e293b">⏳ Preparando e Instalando… (4/4)</p>'
         '<p style="margin:0 0 8px;font-size:13px;color:#475569">Carregando funções internas…</p>'
-        '<p style="margin:0 0 10px;font-size:12px;color:#d97706;font-style:italic">⚠️ Dica: Essa etapa deve levar cerca de 1 minuto. Não recarregue a página!</p>'
+        '<p style="margin:0 0 10px;font-size:12px;color:#d97706;font-style:italic">⚠️ Dica: Essa etapa leva de 1 a 2 minutos. Não recarregue a página!</p>'
         '<div style="background:#e2e8f0;border-radius:99px;height:6px">'
         '<div style="background:#4f46e5;width:80%;height:6px;border-radius:99px"></div></div></div>'
     )
@@ -40,54 +40,73 @@ import torch
 # Suprime as barras de progresso de download do HuggingFace Hub (tqdm)
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
+# Os ajustes de compatibilidade abaixo ficam em try/except: se uma atualização do
+# Colab mudar a peça ajustada, o ajuste é pulado e anotado no log, e a ferramenta
+# segue. Quando funcionam, o comportamento é o mesmo de antes.
+
 # Fix pyannote.audio 3.1.1 compatibility with colab's newer torchaudio
 import sys
 import types
-import torchaudio
 
-if not hasattr(torchaudio, "AudioMetaData"):
-    torchaudio.AudioMetaData = type("AudioMetaData", (), {})
-if not hasattr(torchaudio, "list_audio_backends"):
-    torchaudio.list_audio_backends = lambda: ["soundfile"]
-if not hasattr(torchaudio, "set_audio_backend"):
-    torchaudio.set_audio_backend = lambda backend: None
-if not hasattr(torchaudio, "get_audio_backend"):
-    torchaudio.get_audio_backend = lambda: "soundfile"
+try:
+    import torchaudio
 
-if "torchaudio.backend" not in sys.modules:
-    _backend_mod = types.ModuleType("torchaudio.backend")
-    _common_mod = types.ModuleType("torchaudio.backend.common")
-    _common_mod.AudioMetaData = torchaudio.AudioMetaData
-    _backend_mod.common = _common_mod
-    sys.modules["torchaudio.backend"] = _backend_mod
-    sys.modules["torchaudio.backend.common"] = _common_mod
-    torchaudio.backend = _backend_mod
+    if not hasattr(torchaudio, "AudioMetaData"):
+        torchaudio.AudioMetaData = type("AudioMetaData", (), {})
+    if not hasattr(torchaudio, "list_audio_backends"):
+        torchaudio.list_audio_backends = lambda: ["soundfile"]
+    if not hasattr(torchaudio, "set_audio_backend"):
+        torchaudio.set_audio_backend = lambda backend: None
+    if not hasattr(torchaudio, "get_audio_backend"):
+        torchaudio.get_audio_backend = lambda: "soundfile"
+
+    if "torchaudio.backend" not in sys.modules:
+        _backend_mod = types.ModuleType("torchaudio.backend")
+        _common_mod = types.ModuleType("torchaudio.backend.common")
+        _common_mod.AudioMetaData = torchaudio.AudioMetaData
+        _backend_mod.common = _common_mod
+        sys.modules["torchaudio.backend"] = _backend_mod
+        sys.modules["torchaudio.backend.common"] = _common_mod
+        torchaudio.backend = _backend_mod
+except Exception as _e:
+    registrar_erro(f"[compatibilidade] ajuste do torchaudio não aplicado: {_e!r}")
 
 # Fix huggingface_hub crashing when pyannote.audio passes 'use_auth_token'
 import huggingface_hub
 
-_orig_hf_hub_download = huggingface_hub.hf_hub_download
+# Cada ajuste guarda a função original dentro de si (não numa variável global) e
+# leva a marca _ajuste_attrindade. Assim, rodar o Passo 1 duas vezes não embrulha
+# a função ajustada nela mesma (o que fazia a chamada girar em círculo até travar).
 
 
-def _patched_hf_hub_download(*args, **kwargs):
-    if "use_auth_token" in kwargs:
-        kwargs["token"] = kwargs.pop("use_auth_token")
-    return _orig_hf_hub_download(*args, **kwargs)
+def _trocar_argumento(func, de, para):
+    """Devolve func aceitando o argumento `de` com o nome `para`."""
+
+    def _ajustada(*args, **kwargs):
+        if de in kwargs:
+            kwargs[para] = kwargs.pop(de)
+        return func(*args, **kwargs)
+
+    _ajustada._ajuste_attrindade = True
+    return _ajustada
 
 
-huggingface_hub.hf_hub_download = _patched_hf_hub_download
+try:
+    if not getattr(huggingface_hub.hf_hub_download, "_ajuste_attrindade", False):
+        huggingface_hub.hf_hub_download = _trocar_argumento(
+            huggingface_hub.hf_hub_download, "use_auth_token", "token"
+        )
+except Exception as _e:
+    registrar_erro(f"[compatibilidade] ajuste do hf_hub_download não aplicado: {_e!r}")
 
-_orig_ModelCard_load = huggingface_hub.ModelCard.load
-
-
-@classmethod
-def _patched_ModelCard_load(cls, *args, **kwargs):
-    if "use_auth_token" in kwargs:
-        kwargs["token"] = kwargs.pop("use_auth_token")
-    return _orig_ModelCard_load.__func__(cls, *args, **kwargs)
-
-
-huggingface_hub.ModelCard.load = _patched_ModelCard_load
+try:
+    _orig_ModelCard_load = huggingface_hub.ModelCard.load.__func__
+    if not getattr(_orig_ModelCard_load, "_ajuste_attrindade", False):
+        huggingface_hub.ModelCard.load = classmethod(
+            _trocar_argumento(_orig_ModelCard_load, "use_auth_token", "token")
+        )
+except Exception as _e:
+    registrar_erro(f"[compatibilidade] ajuste do ModelCard.load não aplicado: {_e!r}")
 
 # Fix numpy internal C-extension symbols and NumPy 2.0 expired attributes
 try:
@@ -113,8 +132,9 @@ try:
         setattr(_np, _k, _v)
 
     _orig_np_getattr = getattr(_np, "__getattr__", None)
-    if _orig_np_getattr is not None:
-        def _safe_np_getattr(attr):
+    # Mesma proteção contra rodar duas vezes: só embrulha o __getattr__ original.
+    if _orig_np_getattr is not None and not getattr(_orig_np_getattr, "_ajuste_attrindade", False):
+        def _safe_np_getattr(attr, _orig_np_getattr=_orig_np_getattr):
             if attr in _compat_map:
                 return _compat_map[attr]
             try:
@@ -128,9 +148,10 @@ try:
                         setattr(_np, attr, _val)
                         return _val
                 raise
+        _safe_np_getattr._ajuste_attrindade = True
         _np.__getattr__ = _safe_np_getattr
-except Exception:
-    pass
+except Exception as _e:
+    registrar_erro(f"[compatibilidade] ajuste do numpy não aplicado: {_e!r}")
 
 try:
     import numpy._core.umath as _numath
@@ -147,20 +168,38 @@ try:
 except Exception:
     pass
 
+def _falha_ao_abrir(peca, e):
+    """Uma biblioteca instalada não abriu (ex.: versão nova do torchaudio/numpy no Colab).
+
+    Rodar ▶ de novo daria o mesmo erro, porque a instalação seria pulada: o cartão manda
+    reiniciar o ambiente, e o Passo 1 deixa de contar como concluído (reinstala na próxima).
+    """
+    globals().pop("passo1_concluido", None)
+    registrar_erro(f"[importação] {peca} falhou: {type(e).__name__}: {e}")
+    clear_output(wait=True)
+    return ErroAmigavel(
+        "A instalação não terminou direito",
+        "Uma parte da ferramenta foi instalada, mas não abriu. Geralmente é uma instabilidade "
+        "na internet do Colab durante a instalação.",
+        _REINICIAR_TUDO + " " + _FAZER_DIAGNOSTICO,
+        tecnico=f"{peca}: {type(e).__name__}: {e}",
+    )
+
+
 # Fix pyannote.audio expecting 'use_auth_token' while WhisperX passes 'token'
-import pyannote.audio
+try:
+    import pyannote.audio
+except Exception as _e:
+    raise _falha_ao_abrir("pyannote.audio", _e) from _e
 
-_original_from_pretrained = pyannote.audio.Pipeline.from_pretrained
-
-
-@classmethod
-def _patched_from_pretrained(cls, checkpoint, **kwargs):
-    if "token" in kwargs:
-        kwargs["use_auth_token"] = kwargs.pop("token")
-    return _original_from_pretrained.__func__(cls, checkpoint, **kwargs)
-
-
-pyannote.audio.Pipeline.from_pretrained = _patched_from_pretrained
+try:
+    _original_from_pretrained = pyannote.audio.Pipeline.from_pretrained.__func__
+    if not getattr(_original_from_pretrained, "_ajuste_attrindade", False):
+        pyannote.audio.Pipeline.from_pretrained = classmethod(
+            _trocar_argumento(_original_from_pretrained, "token", "use_auth_token")
+        )
+except Exception as _e:
+    registrar_erro(f"[compatibilidade] ajuste do pyannote Pipeline.from_pretrained não aplicado: {_e!r}")
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pydub")
 warnings.filterwarnings("ignore", category=UserWarning, module="huggingface_hub.*")
@@ -170,10 +209,13 @@ import logging
 logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
 logging.getLogger("huggingface_hub.utils._http").setLevel(logging.ERROR)
 
-import whisperx
-from pydub import AudioSegment  # noqa: F401 — usado por whisperx internamente
+try:
+    import whisperx
+    from pydub import AudioSegment  # noqa: F401 — usado por whisperx internamente
+    from loguru import logger
+except Exception as _e:
+    raise _falha_ao_abrir("whisperx/pydub/loguru", _e) from _e
 from urllib.parse import unquote
-from loguru import logger
 
 # ---------------------------------------------------------------------------
 # LOG DE SESSÃO
@@ -238,10 +280,18 @@ def _log_cabecalho_sessao():
         logger.info(f"CUDA versão: {torch.version.cuda}")
         mem_total = torch.cuda.get_device_properties(0).total_memory / (1024**3)
         logger.info(f"VRAM total : {mem_total:.1f} GB")
-    try:
-        logger.info(f"WhisperX   : {whisperx.__version__}")
-    except AttributeError:
-        logger.info("WhisperX   : instalado (versão não exposta)")
+    # Versões realmente instaladas (mostra se a instalação usou o plano B)
+    from importlib import metadata as _metadata
+
+    for _pacote in (
+        "whisperx", "faster-whisper", "ctranslate2", "transformers",
+        "nvidia-cublas-cu12", "pyannote.audio", "huggingface_hub", "numpy", "yt-dlp",
+    ):
+        try:
+            _versao = _metadata.version(_pacote)
+        except Exception:
+            _versao = "não instalado"
+        logger.info(f"{_pacote:<19}: {_versao}")
     try:
         runtime = subprocess.run(
             ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
@@ -256,25 +306,176 @@ def _log_cabecalho_sessao():
     logger.info(sep)
 
 
-_log_cabecalho_sessao()
+try:
+    _log_cabecalho_sessao()
+except Exception as _e:  # o cabeçalho é só diagnóstico: nunca pode parar o Passo 1
+    logger.warning(f"Cabeçalho de sessão incompleto: {_e!r}")
+
+# A captura global de exceções fica em 00_bootstrap.py (cartão amigável + log).
 
 # ---------------------------------------------------------------------------
-# CAPTURA GLOBAL DE EXCEÇÕES
+# CONFERÊNCIA DAS PEÇAS DE TRANSCRIÇÃO
+# O whisperx só carrega as peças de transcrição (faster-whisper, ctranslate2,
+# transformers) quando são usadas. Abri-las agora faz uma instalação quebrada
+# aparecer aqui no Passo 1, e não no meio do Passo 3.
 # ---------------------------------------------------------------------------
 
+import contextlib
+import io
 
-def _registrar_excecao(shell, etype, evalue, tb, tb_offset=None):
-    import traceback
+try:
+    _saida_import = io.StringIO()
+    with contextlib.redirect_stdout(_saida_import), contextlib.redirect_stderr(_saida_import):
+        import whisperx.asr  # noqa: F401
+    if _saida_import.getvalue().strip():
+        logger.debug(f"[importação] saída do whisperx.asr:\n{_saida_import.getvalue().strip()}")
+except Exception as _e:
+    raise _falha_ao_abrir("whisperx.asr", _e) from _e
 
-    tb_str = "".join(traceback.format_exception(etype, evalue, tb))
-    logger.error(f"EXCEÇÃO NÃO TRATADA: {etype.__name__}: {evalue}")
-    logger.error(f"Traceback completo:\n{tb_str}")
-    shell.showtraceback((etype, evalue, tb), tb_offset=tb_offset)
+# O whisperx cria, no primeiro uso, um tratador de log preso à saída daquele
+# momento: as mensagens dele (em inglês) iriam para a tela ou para lugar nenhum.
+# Aqui elas passam a ir para o log de sessão.
+try:
+
+    class _LogWhisperxParaSessao(logging.Handler):
+        def emit(self, record):
+            try:
+                logger.debug(f"[whisperx] {record.levelname}: {record.getMessage()}")
+            except Exception:
+                pass
+
+    _wx_logger = logging.getLogger("whisperx")
+    _wx_logger.handlers.clear()
+    _wx_logger.addHandler(_LogWhisperxParaSessao())
+    _wx_logger.setLevel(logging.INFO)
+    _wx_logger.propagate = False
+except Exception as _e:
+    logger.warning(f"Não foi possível redirecionar o log do whisperx: {_e!r}")
+
+# ---------------------------------------------------------------------------
+# PLACA DE VÍDEO: escolha do dispositivo e autoteste
+# Define DISPOSITIVO ("cuda" ou "cpu") e MOTIVO_CPU (None ou texto curto),
+# lidos pelo cartão final do Passo 1 e pelo Passo 3.
+# A falha do cuBLAS só aparece na primeira conta de verdade na GPU, por isso o
+# teste roda o Whisper "tiny" com 1 segundo de silêncio.
+# ---------------------------------------------------------------------------
+
+_MOTIVO_SEM_GPU = "sem GPU"
+_MOTIVO_GPU_FALHOU = "a placa de vídeo existe, mas não passou no teste"
 
 
-ip = get_ipython()
-if ip:
-    ip.set_custom_exc((Exception,), _registrar_excecao)
+def _testar_gpu_uma_vez():
+    """Roda o Whisper 'tiny' na GPU com 1 s de silêncio, em silêncio.
+
+    Devolve (situacao, detalhe), com situacao:
+      'ok'           a GPU fez as contas;
+      'falhou'       a GPU (ou o ctranslate2 nela) não funcionou;
+      'inconclusivo' não deu para testar (ex.: sem internet para baixar o modelo de teste).
+    """
+    saida = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(saida), contextlib.redirect_stderr(saida), warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                import ctranslate2
+                import faster_whisper
+                import numpy as _np_teste
+            except Exception as e:
+                return "inconclusivo", f"importação: {e!r}"
+            try:
+                if ctranslate2.get_cuda_device_count() < 1:
+                    return "falhou", "o ctranslate2 não enxerga a placa de vídeo"
+            except Exception as e:
+                return "falhou", f"get_cuda_device_count: {e!r}"
+            # Baixar o modelo é separado do teste: falta de internet não é defeito da GPU.
+            try:
+                caminho = faster_whisper.download_model("tiny")
+            except Exception as e:
+                return "inconclusivo", f"download do modelo de teste: {e!r}"
+            # Só parâmetros antigos e estáveis: num faster-whisper mais novo (plano B),
+            # um parâmetro desconhecido viraria um falso "a GPU falhou".
+            try:
+                modelo = faster_whisper.WhisperModel(caminho, device="cuda", compute_type="float16")
+                segmentos, _info = modelo.transcribe(
+                    _np_teste.zeros(16000, dtype=_np_teste.float32),
+                    language="pt",
+                    beam_size=1,
+                    vad_filter=False,
+                    temperature=0.0,
+                    condition_on_previous_text=False,
+                )
+                list(segmentos)  # as contas só acontecem quando os segmentos são lidos
+                del segmentos, _info, modelo
+            except Exception as e:
+                return "falhou", f"{type(e).__name__}: {e}"
+            return "ok", ""
+    finally:
+        texto = saida.getvalue().strip()
+        if texto:
+            logger.debug(f"[GPU] saída do autoteste:\n{texto[-3000:]}")
+
+
+def _liberar_memoria_gpu():
+    gc.collect()
+    try:
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+
+def _escolher_dispositivo():
+    """Devolve (DISPOSITIVO, MOTIVO_CPU). Nunca levanta exceção."""
+    try:
+        tem_gpu = torch.cuda.is_available()
+    except Exception as e:
+        logger.warning(f"[GPU] torch.cuda.is_available() falhou: {e!r}")
+        tem_gpu = False
+    if not tem_gpu:
+        logger.warning("[GPU] nenhuma placa de vídeo neste ambiente; a transcrição vai usar o processador (CPU)")
+        return "cpu", _MOTIVO_SEM_GPU
+
+    try:
+        clear_output(wait=True)
+        _barra(4, 4, "Testando a placa de vídeo…")
+    except Exception:
+        pass
+
+    import time as _time
+
+    t0 = _time.time()
+    situacao, detalhe = _testar_gpu_uma_vez()
+    _liberar_memoria_gpu()
+    if situacao == "falhou":
+        logger.warning(f"[GPU] autoteste falhou ({detalhe}); reforçando o cuBLAS 12 e repetindo")
+        garantir_cublas12()
+        situacao, detalhe = _testar_gpu_uma_vez()
+        _liberar_memoria_gpu()
+    logger.info(f"[GPU] autoteste: {situacao} em {_time.time() - t0:.1f}s {detalhe}".rstrip())
+
+    if situacao == "falhou":
+        registrar_erro(f"[GPU] autoteste falhou duas vezes; a transcrição vai usar o processador (CPU). {detalhe}")
+        return "cpu", _MOTIVO_GPU_FALHOU
+    if situacao == "inconclusivo":
+        logger.warning("[GPU] autoteste inconclusivo; mantendo a placa de vídeo (cuda)")
+    return "cuda", None
+
+
+if globals().get("DISPOSITIVO") == "cuda":
+    # Passo 1 rodado de novo no mesmo ambiente: a GPU já passou no teste.
+    # (Trocar o tipo de ambiente reinicia tudo, então isso não fica desatualizado.)
+    logger.info("[GPU] autoteste já aprovado nesta sessão; mantendo cuda")
+    MOTIVO_CPU = None
+else:
+    try:
+        DISPOSITIVO, MOTIVO_CPU = _escolher_dispositivo()
+    except Exception as _e:
+        registrar_erro(f"[GPU] escolha do dispositivo falhou: {_e!r}")
+        try:
+            DISPOSITIVO = "cuda" if torch.cuda.is_available() else "cpu"
+        except Exception:
+            DISPOSITIVO = "cpu"
+        MOTIVO_CPU = None if DISPOSITIVO == "cuda" else _MOTIVO_SEM_GPU
+logger.info(f"[GPU] DISPOSITIVO={DISPOSITIVO} | MOTIVO_CPU={MOTIVO_CPU}")
 
 # ---------------------------------------------------------------------------
 # ESTADO GLOBAL DE ETAPAS
