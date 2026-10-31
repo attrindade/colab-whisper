@@ -90,10 +90,13 @@ def juntar(*filenames: str, titulo: str = "") -> str:
     return _montar(form, partes)
 
 
-def com_guarda(filename: str) -> str:
-    """Lê o .py de um passo e insere a guarda do Passo 1 logo depois do formulário."""
+def com_guarda(filename: str, *ajudantes: str) -> str:
+    """Lê o .py de um passo e insere a guarda do Passo 1 logo depois do formulário.
+
+    Os `ajudantes` (outros .py) entram entre a guarda e o corpo do passo.
+    """
     form, corpo = _separar_form(ler(filename))
-    return _montar(form, [ler("_guarda_passo1.py"), corpo])
+    return _montar(form, [ler("_guarda_passo1.py"), *(ler(a) for a in ajudantes), corpo])
 
 
 # ── Conteúdo das células markdown ────────────────────────────────────────────
@@ -106,7 +109,7 @@ MD_CABECALHO = """\
 
 ---
 
-***Atualizado em 28/10/2026***
+***Atualizado em 31/10/2026***
 
 ***O que é o Google Colab?***
 
@@ -214,7 +217,7 @@ celulas = [
     celula_codigo(com_guarda("07_step2_upload.py")),
     # Passo 3 (termina mostrando os downloads)
     celula_markdown(MD_PASSO3),
-    celula_codigo(com_guarda("09_step3_transcription.py")),
+    celula_codigo(com_guarda("09_step3_transcription.py", "08_multilingue.py")),
     # Suporte: mostrar downloads de novo + diagnóstico
     celula_markdown(MD_SUPORTE),
     celula_codigo(com_guarda("11_step4_export.py")),

@@ -302,6 +302,32 @@ for name, code in _IDIOMA_MAP.items():
     val = "None" if code is None else code
     sel = "selected" if code == language else ""
     options_html += f'<option value="{val}" {sel}>{name}</option>'
+# Entrevista com perguntas num idioma e respostas em outro (lógica no 08_multilingue)
+options_html += '<option value="multi">Mais de um idioma (ex.: perguntas e respostas) 🌐</option>'
+
+_IDIOMAS_FIXOS = [(n, c) for n, c in _IDIOMA_MAP.items() if c]
+_NOME_IDIOMA = {c: n.rsplit(" ", 1)[0] for n, c in _IDIOMAS_FIXOS}  # "pt" -> "Português"
+
+
+def _caixas_multi(i):
+    """Caixas de marcar dos idiomas do modo "Mais de um idioma" (Português já vem marcado)."""
+    caixas = ""
+    for n, c in _IDIOMAS_FIXOS:
+        marcado = "checked" if c == "pt" else ""
+        caixas += (
+            f'<label style="display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#1e293b;'
+            f'cursor:pointer;margin:0 12px 6px 0;white-space:nowrap">'
+            f'<input type="checkbox" class="ml_{i}" value="{c}" {marcado} style="cursor:pointer">{_p3_html.escape(n)}</label>'
+        )
+    return (
+        f'<div id="multi_box_{i}" style="display:none;margin-top:8px;padding:10px 12px;background:#f8fafc;'
+        'border:1px dashed #cbd5e1;border-radius:6px">'
+        '<p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#334155">Quais idiomas são falados?</p>'
+        f'<div style="display:flex;flex-wrap:wrap">{caixas}</div>'
+        '<p style="margin:2px 0 0;font-size:12px;color:#64748b">Marque só os que aparecem no áudio (ex.: Português e Espanhol). '
+        "Cada trecho sai no idioma em que foi falado. Demora um pouco mais que um idioma só.</p>"
+        "</div>"
+    )
 
 # "Quantas pessoas falam?": menu [Não sei | Exatamente | Pelo menos] + campo do número.
 # Exato serve para entrevista de 2; "pelo menos 5" deixa a ferramenta achar mais.
@@ -337,9 +363,10 @@ for i, job in enumerate(batch_jobs):
         <div style="display:flex; flex-direction:column; gap:10px;">
             <div>
                 <label style="font-size:13px; color:#475569; margin-bottom:4px; display:block">Idioma do áudio:</label>
-                <select id="lang_{i}" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; cursor:pointer; color:#1e293b; background:#f8fafc">
+                <select id="lang_{i}" onchange="document.getElementById('multi_box_{i}').style.display = this.value === 'multi' ? 'block' : 'none'" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; font-size:14px; cursor:pointer; color:#1e293b; background:#f8fafc">
                     {options_html}
                 </select>
+                {_caixas_multi(i)}
             </div>
 
             <div style="display:flex; align-items:center; margin-top:4px;">
@@ -394,11 +421,12 @@ js_escolha_lang = f"""
         let configs = [];
         for (let i = 0; i < {len(batch_jobs)}; i++) {{
             let lang = wrapper.querySelector('#lang_' + i).value;
+            let langs = Array.from(wrapper.querySelectorAll('.ml_' + i + ':checked')).map(function(c){{ return c.value; }});
             let diar = wrapper.querySelector('#chk_diar_' + i).checked;
             let modo = wrapper.querySelector('#spk_' + i).value;
             let qtd = parseInt(wrapper.querySelector('#spk_n_' + i).value, 10);
             let spks = (modo !== 'None' && qtd >= 1) ? modo + ':' + Math.min(qtd, 20) : 'None';
-            configs.push(JSON.stringify({{lang: lang, diar: diar, spks: spks}}));
+            configs.push(JSON.stringify({{lang: lang, langs: langs, diar: diar, spks: spks}}));
         }}
         container.innerHTML = '';
         resolve(configs.join('|||'));
@@ -415,13 +443,23 @@ if res_configs_str:
     for i, c in enumerate(configs_list):
         conf = json.loads(c)
         batch_jobs[i]["selected_language"] = (
-            None if conf["lang"] == "None" else conf["lang"]
+            None if conf["lang"] in ("None", "multi") else conf["lang"]
         )
+        batch_jobs[i]["idiomas_multi"] = None
+        if conf["lang"] == "multi":
+            _ml = [x for x in dict.fromkeys(conf.get("langs") or []) if x in _NOME_IDIOMA]
+            if len(_ml) >= 2:
+                batch_jobs[i]["idiomas_multi"] = _ml
+            elif len(_ml) == 1:  # marcou um só: é o modo normal com esse idioma
+                batch_jobs[i]["selected_language"] = _ml[0]
+            # nenhum marcado: fica "Detectar automaticamente"
+            logger.info(f"[Passo 3] {batch_jobs[i]['filename']}: mais de um idioma, marcados {_ml}")
         batch_jobs[i]["run_diarization"] = conf["diar"]
         batch_jobs[i]["num_speakers"], batch_jobs[i]["modo_locutores"] = _ler_locutores(conf["spks"])
 else:
     for job in batch_jobs:
         job["selected_language"] = language
+        job["idiomas_multi"] = None
         job["run_diarization"] = False
         job["num_speakers"] = None
         job["modo_locutores"] = "exato"
@@ -432,8 +470,10 @@ for job in batch_jobs:
     for _k in (
         "status", "erro", "transcription_result", "language", "diarization_temp",
         "diarization_result", "diarization_falhou", "alinhamento_falhou",
+        "idiomas_usados", "idiomas_falhou",
     ):
         job.pop(_k, None)
+    job.setdefault("idiomas_multi", None)
     job.setdefault("run_diarization", False)
     job.setdefault("num_speakers", job.get("min_speakers"))  # nome antigo do campo
     job.setdefault("selected_language", language)
@@ -500,8 +540,18 @@ for idx, job in enumerate(batch_jobs):
         _dur_s = int(len(audio) / 16000)
         _dur_fmt = _fmt_tempo(_dur_s)
         _dur_min = _dur_s / 60.0
-        _est_trans_s = max(5, int(_dur_min * _CUSTO_TRANS_S_MIN))
-        _est_align_s = max(5, int(_dur_min * _CUSTO_ALIGN_S_MIN)) + 30
+        _ml_idiomas = job.get("idiomas_multi") or []
+        # Vários idiomas: 1ª passada no áudio todo + medição + passadas só nos trechos dos outros idiomas
+        _fator_ml = 1.8 if _ml_idiomas else 1.0
+        _est_trans_s = max(5, int(_dur_min * _CUSTO_TRANS_S_MIN * _fator_ml))
+        _est_align_s = max(5, int(_dur_min * _CUSTO_ALIGN_S_MIN)) + 30 * max(1, len(_ml_idiomas))
+        _linha_idiomas = (
+            '<tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600">Idiomas</td>'
+            f'<td style="padding:3px 0;color:#1e293b">{_p3_html.escape(" e ".join(_NOME_IDIOMA[c] for c in _ml_idiomas))}'
+            f' <span id="wb-ml-etapa-{idx}" style="color:#64748b"></span></td></tr>'
+            if _ml_idiomas
+            else ""
+        )
 
         logger.info(
             f"Processando Transcrição {idx+1}/{len(batch_jobs)}: {target_filename} (Duração do áudio: {_dur_fmt})"
@@ -523,6 +573,7 @@ for idx, job in enumerate(batch_jobs):
                 f'<td style="padding:3px 0;color:#1e293b">{_dur_fmt}</td></tr>'
                 '<tr><td style="padding:3px 14px 3px 0;color:#94a3b8;font-weight:600">Estimativa</td>'
                 f'<td style="padding:3px 0;color:#1e293b">~{_fmt_tempo(_est_trans_s)}</td></tr>'
+                f"{_linha_idiomas}"
                 f"{_AVISO_CPU_HTML}"
                 "</table>"
                 '<div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-top:2px">'
@@ -537,14 +588,54 @@ for idx, job in enumerate(batch_jobs):
 
         logger.info("Transcrevendo...")
         _t0_trans = time.time()
-        with Silenciador(display_id=_trans_bar_id):
-            result = model.transcribe(
-                audio,
-                batch_size=batch_size,
-                print_progress=True,
-                language=job["selected_language"],
-                **_p3_progresso(model.transcribe, _trans_bar_id),
-            )
+        if _ml_idiomas:
+
+            def _ml_etapa(etapa, _idx=idx):
+                tipo, cod = etapa
+                texto = {
+                    "primeiro": f"(1ª passada: tudo em {_NOME_IDIOMA.get(cod, cod)})",
+                    "medindo": "(descobrindo o idioma de cada trecho)",
+                    "outro": f"(trechos em {_NOME_IDIOMA.get(cod, cod)})",
+                }.get(tipo, "")
+                logger.info(f"[Passo 3] Vários idiomas: {texto}")
+                try:
+                    output.eval_js(
+                        f"(function(){{var e=document.getElementById('wb-ml-etapa-{_idx}');"
+                        f"if(e)e.textContent={json.dumps(texto)};}})()"
+                    )
+                except Exception:
+                    pass
+
+            with Silenciador(display_id=_trans_bar_id):
+                _segs_ml, _info_ml = ml_transcrever(
+                    model,
+                    audio,
+                    _ml_idiomas,
+                    batch_size,
+                    extras=lambda _p: {"print_progress": True, **_p3_progresso(model.transcribe, _trans_bar_id)},
+                    ao_mudar=_ml_etapa,
+                )
+            if _info_ml["erro_deteccao"] is not None:
+                job["idiomas_falhou"] = True
+                registrar_erro(
+                    f"[Passo 3] Medição de idioma por trecho falhou em {target_filename}; tudo em "
+                    f"{_ml_idiomas[0]}: {type(_info_ml['erro_deteccao']).__name__}: {_info_ml['erro_deteccao']}"
+                )
+            job["idiomas_usados"] = {k: round(v, 1) for k, v in _info_ml["idiomas"].items()}
+            logger.info(f"[Passo 3] Segundos por idioma em {target_filename}: {job['idiomas_usados']}")
+            result = {
+                "segments": _segs_ml,
+                "language": max(_info_ml["idiomas"], key=_info_ml["idiomas"].get) if _info_ml["idiomas"] else _ml_idiomas[0],
+            }
+        else:
+            with Silenciador(display_id=_trans_bar_id):
+                result = model.transcribe(
+                    audio,
+                    batch_size=batch_size,
+                    print_progress=True,
+                    language=job["selected_language"],
+                    **_p3_progresso(model.transcribe, _trans_bar_id),
+                )
         _t1_trans = time.time()
         logger.info(
             f"Tempo de transcrição ({target_filename}): {_t1_trans - _t0_trans:.2f}s"
@@ -588,35 +679,49 @@ for idx, job in enumerate(batch_jobs):
 
         logger.info("Alinhando timestamps...")
         _t0_align = time.time()
-        model_a = None
-        try:
-            with Silenciador(display_id=_align_bar_id):
-                model_a, metadata = whisperx.load_align_model(
-                    language_code=idioma_final, device=device
-                )
-                _alinhado = whisperx.align(
-                    _segs_trans,
-                    model_a,
-                    metadata,
-                    audio,
-                    device,
-                    return_char_alignments=False,
-                    print_progress=True,
-                )
-            _segs_finais = (_alinhado or {}).get("segments") or []
-            if not _segs_finais:
-                raise ValueError("o alinhamento devolveu zero segmentos")
-        except Exception as e_align:
-            # Sem alinhamento (ex.: idioma sem modelo de ajuste): fica a transcrição, com tempos por trecho
-            registrar_erro(
-                f"[Passo 3] Alinhamento falhou em {target_filename} (idioma {idioma_final}); "
-                f"seguindo sem alinhamento: {type(e_align).__name__}: {e_align}\n{_p3_traceback.format_exc()}"
-            )
-            _segs_finais = _segs_trans
-            job["alinhamento_falhou"] = True
-        finally:
+        # Um grupo por idioma: no modo normal é um só; com vários idiomas, cada um usa o seu modelo de ajuste
+        if _ml_idiomas:
+            _grupos_align = {}
+            for _s in _segs_trans:
+                _grupos_align.setdefault(_s.get("language") or idioma_final, []).append(_s)
+        else:
+            _grupos_align = {idioma_final: _segs_trans}
+        _segs_finais = []
+        for _lang_al, _segs_al in _grupos_align.items():
             model_a = None
-            _p3_liberar_memoria()
+            try:
+                with Silenciador(display_id=_align_bar_id):
+                    model_a, metadata = whisperx.load_align_model(
+                        language_code=_lang_al, device=device
+                    )
+                    _alinhado = whisperx.align(
+                        _segs_al,
+                        model_a,
+                        metadata,
+                        audio,
+                        device,
+                        return_char_alignments=False,
+                        print_progress=True,
+                    )
+                _segs_ok = (_alinhado or {}).get("segments") or []
+                if not _segs_ok:
+                    raise ValueError("o alinhamento devolveu zero segmentos")
+            except Exception as e_align:
+                # Sem alinhamento (ex.: idioma sem modelo de ajuste): fica a transcrição, com tempos por trecho
+                registrar_erro(
+                    f"[Passo 3] Alinhamento falhou em {target_filename} (idioma {_lang_al}); "
+                    f"seguindo sem alinhamento: {type(e_align).__name__}: {e_align}\n{_p3_traceback.format_exc()}"
+                )
+                _segs_ok = _segs_al
+                job["alinhamento_falhou"] = True
+            finally:
+                model_a = None
+                _p3_liberar_memoria()
+            if _ml_idiomas:
+                _segs_ok = [dict(_s, language=_lang_al) for _s in _segs_ok]
+            _segs_finais.extend(_segs_ok)
+        if len(_grupos_align) > 1:
+            _segs_finais.sort(key=lambda _s: float(_s.get("start", 0)))
         _t1_align = time.time()
         logger.info(
             f"Tempo de alinhamento ({target_filename}): {_t1_align - _t0_align:.2f}s"
@@ -857,11 +962,27 @@ for _j in _p3_ok:
         _notas.append("sem separação de locutores")
     if _j.get("alinhamento_falhou"):
         _notas.append("tempos de cada trecho menos precisos (não deu para ajustar palavra por palavra neste idioma)")
-    _p3_linhas.append(_p3_linha("⚠️" if _notas else "✅", _j.get("filename"), "; ".join(_notas)))
+    if _j.get("idiomas_falhou"):
+        _notas.append(
+            "não deu para separar os idiomas; tudo saiu em "
+            + _NOME_IDIOMA.get((_j.get("idiomas_multi") or ["?"])[0], "?").lower()
+        )
+    _info = []
+    if _j.get("idiomas_usados") and not _j.get("idiomas_falhou"):
+        _usados = _j["idiomas_usados"]
+        _total = sum(_usados.values()) or 1
+        _info.append(
+            "idiomas: "
+            + ", ".join(
+                f"{_NOME_IDIOMA.get(c, c).lower()} {round(100 * s / _total)}%"
+                for c, s in sorted(_usados.items(), key=lambda kv: -kv[1])
+            )
+        )
+    _p3_linhas.append(_p3_linha("⚠️" if _notas else "✅", _j.get("filename"), "; ".join(_info + _notas)))
 _p3_linhas += _p3_linhas_erro
 
 _p3_tem_aviso = bool(_p3_erro) or any(
-    j.get("diarization_falhou") or j.get("alinhamento_falhou") for j in _p3_ok
+    j.get("diarization_falhou") or j.get("alinhamento_falhou") or j.get("idiomas_falhou") for j in _p3_ok
 )
 _p3_extra = (
     "<div style='margin-top:10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;"
