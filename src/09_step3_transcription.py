@@ -303,7 +303,7 @@ for name, code in _IDIOMA_MAP.items():
     sel = "selected" if code == language else ""
     options_html += f'<option value="{val}" {sel}>{name}</option>'
 # Entrevista com perguntas num idioma e respostas em outro (lógica no 08_multilingue)
-options_html += '<option value="multi">Mais de um idioma (ex.: perguntas e respostas) 🌐</option>'
+options_html += '<option value="multi">Mais de um idioma 🌐</option>'
 
 _IDIOMAS_FIXOS = [(n, c) for n, c in _IDIOMA_MAP.items() if c]
 _NOME_IDIOMA = {c: n.rsplit(" ", 1)[0] for n, c in _IDIOMAS_FIXOS}  # "pt" -> "Português"
