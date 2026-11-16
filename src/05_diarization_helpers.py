@@ -128,7 +128,7 @@ def _loc_linha_trecho(ini, txt, src):
         f"{botao}"
         f'<span style="flex:none;color:#94a3b8;font-size:12px;font-variant-numeric:tabular-nums">{ts}</span>'
         f'<span title="{esc(txt)}" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;'
-        f'text-overflow:ellipsis;font-size:13px;color:#475569">{esc(txt)}</span>'
+        f'text-overflow:ellipsis;font-size:13px;line-height:1.6;padding-bottom:1px;color:#475569">{esc(txt)}</span>'
         "</div>"
     )
 
