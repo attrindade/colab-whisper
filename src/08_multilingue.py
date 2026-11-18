@@ -11,6 +11,9 @@ inteiro. Aqui o idioma é decidido por trecho:
   3. para cada outro idioma, transcreve de novo só os trechos dele (o resto do áudio
      vira silêncio, então os tempos continuam os do arquivo original).
 
+Também tem ml_detectar_idioma: "Detectar automaticamente" por votação em janelas do
+começo, meio e fim (o whisperx ouve só os primeiros 30 s).
+
 Usado pelo Passo 3 (09). Se a medição falhar, tudo fica no 1º idioma e o aviso volta
 em info["erro_deteccao"]. Não usa nada do Colab: dá para testar com um modelo falso.
 """
@@ -54,6 +57,8 @@ def ml_decidir_idiomas(trechos, probs, candidatos, min_s=_ML_MIN_S):
 def ml_medir_idiomas(model, audio, trechos, candidatos, lote=8):
     """Probabilidade de cada idioma candidato em cada trecho (lista de dicts).
 
+    candidatos=None devolve todos os idiomas que o Whisper conhece.
+
     Faz o mesmo que FasterWhisperPipeline.detect_language do whisperx 3.8, mas por
     trecho, em lotes, e guardando a lista inteira de idiomas (não só o primeiro).
     """
@@ -72,10 +77,35 @@ def ml_medir_idiomas(model, audio, trechos, candidatos, lote=8):
         encoder_output = wm.encode(_ml_np.ascontiguousarray(_ml_np.stack(feats)))
         for resultado in wm.model.detect_language(encoder_output):
             todos = {str(tok)[2:-2]: float(prob) for tok, prob in resultado}
-            saida.append({c: todos.get(c, 0.0) for c in candidatos})
+            saida.append(todos if candidatos is None else {c: todos.get(c, 0.0) for c in candidatos})
     if len(saida) != len(trechos):
         raise ValueError(f"medição de idioma devolveu {len(saida)} resultados para {len(trechos)} trechos")
     return saida
+
+
+def ml_janelas_deteccao(duracao_s, janelas=3, tamanho_s=30):
+    """Janelas de 30 s espalhadas pelo áudio (começo, meio, fim); áudio curto = uma janela só."""
+    if duracao_s <= tamanho_s or janelas <= 1:
+        return [(0.0, float(duracao_s))]
+    passo = (duracao_s - tamanho_s) / (janelas - 1)
+    return [(round(i * passo, 3), round(i * passo + tamanho_s, 3)) for i in range(janelas)]
+
+
+def ml_detectar_idioma(model, audio, janelas=3, lote=8):
+    """Idioma do arquivo por votação em janelas do começo, meio e fim.
+
+    O whisperx sozinho ouve só os primeiros 30 s: vinheta, música ou "testando, testando"
+    no começo podem decidir o idioma errado para o arquivo todo. Aqui cada janela soma a
+    probabilidade de cada idioma e vence o maior total. Devolve (idioma, totais).
+    """
+    trechos = ml_janelas_deteccao(len(audio) / _ML_TAXA, janelas)
+    totais = {}
+    for p in ml_medir_idiomas(model, audio, trechos, None, lote=lote):
+        for idioma, prob in p.items():
+            totais[idioma] = totais.get(idioma, 0.0) + prob
+    if not totais:
+        raise ValueError("a medição de idioma não devolveu nenhum idioma")
+    return max(totais, key=totais.get), totais
 
 
 def ml_transcrever(model, audio, candidatos, batch_size, extras=None, ao_mudar=None):

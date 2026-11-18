@@ -25,6 +25,23 @@ _IDIOMA_MAP = {
     "Chinês 🇨🇳": "zh",
     "Árabe 🇸🇦": "ar",
     "Russo 🇷🇺": "ru",
+    # Os de baixo têm modelo de ajuste de tempos no whisperx 3.8 (alignment.py)
+    "Basco": "eu",
+    "Catalão": "ca",
+    "Coreano 🇰🇷": "ko",
+    "Galego": "gl",
+    "Grego 🇬🇷": "el",
+    "Hebraico 🇮🇱": "he",
+    "Hindi 🇮🇳": "hi",
+    "Holandês 🇳🇱": "nl",
+    "Indonésio 🇮🇩": "id",
+    "Polonês 🇵🇱": "pl",
+    "Romeno 🇷🇴": "ro",
+    "Sueco 🇸🇪": "sv",
+    "Tcheco 🇨🇿": "cs",
+    "Turco 🇹🇷": "tr",
+    "Ucraniano 🇺🇦": "uk",
+    "Vietnamita 🇻🇳": "vi",
     "Detectar automaticamente 🔍": None,
 }
 language = _IDIOMA_MAP[idioma_padrao]
@@ -306,7 +323,7 @@ for name, code in _IDIOMA_MAP.items():
 options_html += '<option value="multi">Mais de um idioma 🌐</option>'
 
 _IDIOMAS_FIXOS = [(n, c) for n, c in _IDIOMA_MAP.items() if c]
-_NOME_IDIOMA = {c: n.rsplit(" ", 1)[0] for n, c in _IDIOMAS_FIXOS}  # "pt" -> "Português"
+_NOME_IDIOMA = {c: n.split(" ", 1)[0] for n, c in _IDIOMAS_FIXOS}  # "pt" -> "Português" (alguns sem bandeira)
 
 
 def _caixas_multi(i):
@@ -628,12 +645,30 @@ for idx, job in enumerate(batch_jobs):
                 "language": max(_info_ml["idiomas"], key=_info_ml["idiomas"].get) if _info_ml["idiomas"] else _ml_idiomas[0],
             }
         else:
+            _idioma_job = job["selected_language"]
+            if _idioma_job is None:
+                # "Detectar automaticamente": vota em janelas do começo, meio e fim; se a
+                # medição falhar, o whisperx decide sozinho (primeiros 30 s), como antes.
+                try:
+                    with Silenciador():
+                        _idioma_job, _totais_det = ml_detectar_idioma(model, audio, lote=batch_size)
+                    _top_det = sorted(_totais_det.items(), key=lambda kv: -kv[1])[:3]
+                    logger.info(
+                        f"[Passo 3] Idioma detectado em {target_filename}: {_idioma_job} "
+                        f"(votos: {', '.join(f'{k} {v:.2f}' for k, v in _top_det)})"
+                    )
+                except Exception as e_det:
+                    _idioma_job = None
+                    registrar_erro(
+                        f"[Passo 3] Detecção por janelas falhou em {target_filename}; o whisperx decide: "
+                        f"{type(e_det).__name__}: {e_det}"
+                    )
             with Silenciador(display_id=_trans_bar_id):
                 result = model.transcribe(
                     audio,
                     batch_size=batch_size,
                     print_progress=True,
-                    language=job["selected_language"],
+                    language=_idioma_job,
                     **_p3_progresso(model.transcribe, _trans_bar_id),
                 )
         _t1_trans = time.time()
